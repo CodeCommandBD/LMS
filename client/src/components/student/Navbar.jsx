@@ -40,7 +40,7 @@ const Navbar = () => {
       </div>
       {/* Mobile Navbar */}
       {/* Mobile Navbar */}
-      <div className="md:hidden flex items-center gap-3 sm:gap-5 text-gray-500">
+      <div className="md:hidden flex items-center gap-2 sm:gap-5 text-gray-500 text-sm">
           <button className="hover:text-blue-600 transition-colors">
             Become Educator
           </button>
