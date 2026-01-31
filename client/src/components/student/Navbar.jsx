@@ -29,6 +29,22 @@ const Navbar = () => {
           Create Account
         </button>
       </div>
+      {/* Mobile Navbar */}
+      {/* Mobile Navbar */}
+      <div className="md:hidden flex items-center gap-3 sm:gap-5 text-gray-500">
+          <button className="hover:text-blue-600 transition-colors">
+            Become Educator
+          </button>
+          <Link
+            to="/my-enrollments"
+            className="hover:text-blue-600 transition-colors"
+          >
+            My Enrollments
+          </Link>
+          <button className="">
+            <img src={assets.user_icon} alt="user icon" className="w-8 h-8" />
+          </button>
+      </div>
     </div>
   );
 };
