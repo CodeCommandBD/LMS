@@ -1,4 +1,3 @@
-import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 import { store } from "./store/store.js";
@@ -17,6 +16,14 @@ import Dashboard from "./pages/educator/Dashboard.jsx";
 import AddCourse from "./pages/educator/AddCourse.jsx";
 import MyCourses from "./pages/educator/MyCourses.jsx";
 import StudentEnrolled from "./pages/educator/StudentEnrolled.jsx";
+import { ClerkProvider } from "@clerk/clerk-react";
+
+// clerk
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+if (!PUBLISHABLE_KEY) {
+  throw new Error("Missing Publishable Key");
+}
 
 const router = createBrowserRouter([
   {
@@ -60,16 +67,16 @@ const router = createBrowserRouter([
             element: <Dashboard />,
           },
           {
-            path:"add-course",
-            element: <AddCourse/>,
+            path: "add-course",
+            element: <AddCourse />,
           },
           {
-            path:"my-course",
-            element: <MyCourses/>,
+            path: "my-course",
+            element: <MyCourses />,
           },
           {
-            path:"student-enrolled",
-            element: <StudentEnrolled/>,
+            path: "student-enrolled",
+            element: <StudentEnrolled />,
           },
         ],
       },
@@ -78,9 +85,9 @@ const router = createBrowserRouter([
 ]);
 
 createRoot(document.getElementById("root")).render(
-  <StrictMode>
-    <Provider store={store}>
-      <RouterProvider router={router} />
-    </Provider>
-  </StrictMode>,
+    <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+      <Provider store={store}>
+        <RouterProvider router={router} />
+      </Provider>
+    </ClerkProvider>
 );
