@@ -13,7 +13,7 @@ const Navbar = () => {
       <div className="hidden md:flex items-center gap-5 gray-500">
           <div>
             <button className="">Become Educator</button>
-            <Link to="/login"></Link>
+            <Link to="/my-enrollments"></Link>
           </div>
       </div>
       <div>
