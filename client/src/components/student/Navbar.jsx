@@ -1,9 +1,12 @@
 import React from "react";
 import { assets } from "../../assets/assets";
 import { Link } from "react-router-dom";
+import { useClerk, UserButton, useUser } from "@clerk/clerk-react";
 
 const Navbar = () => {
   const isCourseListPage = location.pathname.includes("/course-list");
+  const {openSignIn} = useClerk();
+  const {user} = useUser();
   return (
     <div
       className={`flex items-center justify-between px-4 sm:px-10 md:px-14 lg:px-36 py-4 border-b border-gray-500 ${isCourseListPage ? "bg-white" : "bg-cyan-100/70"}`}
@@ -25,9 +28,15 @@ const Navbar = () => {
             My Enrollments
           </Link>
         </div>
-        <button className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-colors">
-          Create Account
-        </button>
+        {user ? (
+          <UserButton />
+        ) : (
+          <button 
+          onClick={() => openSignIn()}
+          className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-colors cursor-pointer">
+            Create Account
+          </button>
+        )}
       </div>
       {/* Mobile Navbar */}
       {/* Mobile Navbar */}
@@ -41,9 +50,15 @@ const Navbar = () => {
           >
             My Enrollments
           </Link>
-          <button className="">
-            <img src={assets.user_icon} alt="user icon" className="w-8 h-8" />
-          </button>
+          {user ? (
+            <UserButton />
+          ) : (
+            <button 
+            onClick={() => openSignIn()}
+            className="cursor-pointer">
+              <img src={assets.user_icon} alt="user icon" className="w-8 h-8" />
+            </button>
+          )}
       </div>
     </div>
   );
