@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 import { store } from "./store/store.js";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./index.css";
 import App from "./App.jsx";
 import { createBrowserRouter } from "react-router";
@@ -17,6 +18,20 @@ import AddCourse from "./pages/educator/AddCourse.jsx";
 import MyCourses from "./pages/educator/MyCourses.jsx";
 import StudentEnrolled from "./pages/educator/StudentEnrolled.jsx";
 import { ClerkProvider } from "@clerk/clerk-react";
+
+// Initialize axios interceptors
+import "./lib/axios";
+
+// Create QueryClient instance
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 // clerk
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -85,9 +100,11 @@ const router = createBrowserRouter([
 ]);
 
 createRoot(document.getElementById("root")).render(
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-      <Provider store={store}>
+  <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+    <Provider store={store}>
+      <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
-      </Provider>
-    </ClerkProvider>
+      </QueryClientProvider>
+    </Provider>
+  </ClerkProvider>,
 );
