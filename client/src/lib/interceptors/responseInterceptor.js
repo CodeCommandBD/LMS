@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "react-toastify";
 import store from "../../store/store";
 import { logout } from "../../store/slices/authSlice";
 
@@ -136,23 +137,28 @@ const handle401Error = async (error, originalRequest) => {
  * Handle 403 Forbidden errors
  */
 const handleForbiddenError = (error, data) => {
-  console.error("Access forbidden:", data?.message);
-  error.message =
-    data?.message || "You do not have permission to access this resource";
+  const message = data?.message || "আপনার এই resource এ access নেই";
+  console.error("Access forbidden:", message);
+  toast.error(message);
+  error.message = message;
 };
 
 /**
  * Handle 404 Not Found errors
  */
 const handleNotFoundError = (error, data) => {
-  error.message = data?.message || "Resource not found";
+  const message = data?.message || "Resource খুঁজে পাওয়া যায়নি";
+  toast.error(message);
+  error.message = message;
 };
 
 /**
  * Handle 422 Validation errors
  */
 const handleValidationError = (error, data) => {
-  error.message = data?.message || "Validation failed";
+  const message = data?.message || "Validation failed";
+  toast.error(message);
+  error.message = message;
   error.validationErrors = data?.errors || {};
 };
 
@@ -160,37 +166,45 @@ const handleValidationError = (error, data) => {
  * Handle 429 Rate Limit errors
  */
 const handleRateLimitError = (error) => {
-  error.message = "Too many requests. Please try again later.";
+  const message = "অনেক বেশি requests হয়েছে। একটু পরে try করুন।";
+  toast.error(message);
+  error.message = message;
 };
 
 /**
  * Handle 500 Server errors
  */
 const handleServerError = (error, data) => {
-  error.message =
-    data?.message || "Internal server error. Please try again later.";
+  const message = data?.message || "Server error হয়েছে। একটু পরে try করুন।";
+  toast.error(message);
+  error.message = message;
 };
 
 /**
  * Handle 503 Service Unavailable errors
  */
 const handleServiceUnavailableError = (error) => {
-  error.message = "Service temporarily unavailable. Please try again later.";
+  const message = "Service এখন available নেই। একটু পরে try করুন।";
+  toast.error(message);
+  error.message = message;
 };
 
 /**
  * Handle generic errors
  */
 const handleGenericError = (error, data) => {
-  error.message = data?.message || "An unexpected error occurred";
+  const message = data?.message || "একটা error হয়েছে";
+  toast.error(message);
+  error.message = message;
 };
 
 /**
  * Handle network errors (no response)
  */
 const handleNetworkError = (error) => {
-  error.message =
-    "No response from server. Please check your internet connection.";
+  const message = "Server থেকে response আসেনি। Internet connection check করুন।";
+  toast.error(message);
+  error.message = message;
 };
 
 /**
@@ -207,10 +221,15 @@ const logoutUser = () => {
   // Clear tokens
   localStorage.removeItem("token");
   localStorage.removeItem("refreshToken");
+  localStorage.removeItem("user");
+  localStorage.removeItem("role");
   sessionStorage.removeItem("token");
 
   // Dispatch logout action
   store.dispatch(logout());
+
+  // Show notification
+  toast.error("Session expired। আবার login করুন।");
 
   // Redirect to login page
   if (window.location.pathname !== "/login") {

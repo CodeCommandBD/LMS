@@ -14,6 +14,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@reduxjs/toolkit": "^2.11.2",
     "@tanstack/react-query": "^5.90.20",
+    "@tanstack/react-query-devtools": "^5.91.3",
     "axios": "^1.13.4",
     "humanize-duration": "^3.33.2",
     "quill": "^2.0.3",
@@ -24,8 +25,10 @@
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.13.0",
     "react-simple-star-rating": "^5.1.7",
+    "react-toastify": "^11.0.5",
     "react-youtube": "^10.1.0",
-    "uniqid": "^5.4.0"
+    "uniqid": "^5.4.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

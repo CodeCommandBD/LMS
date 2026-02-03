@@ -8,6 +8,8 @@
  * @param {object} config - Axios request config
  * @returns {object} Modified config
  */
+
+
 export const requestSuccessHandler = (config) => {
   // Get auth token from localStorage or sessionStorage
   const token =
