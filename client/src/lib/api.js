@@ -348,3 +348,34 @@ export const deleteCategory = async (id) => {
   const response = await axios.delete(`/api/categories/${id}`);
   return response.data;
 };
+
+// ============================================
+// SEARCH API CALLS
+// ============================================
+
+export const fetchSearchResults = async (query, filters = {}) => {
+  const params = new URLSearchParams({
+    q: query,
+    ...filters,
+  });
+  const response = await axios.get(`/api/courses/search?${params}`);
+  return response.data;
+};
+
+export const fetchPopularCourses = async () => {
+  const response = await axios.get("/api/courses/popular");
+  return response.data;
+};
+
+export const fetchSearchSuggestions = async (query) => {
+  if (!query || query.length < 2) return [];
+  const response = await axios.get("/api/courses/suggestions", {
+    params: { q: query },
+  });
+  return response.data;
+};
+
+export const fetchTrendingSearches = async () => {
+  const response = await axios.get("/api/search/trending");
+  return response.data;
+};
