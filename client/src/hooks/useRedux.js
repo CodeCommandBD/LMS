@@ -1,5 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
-import { useCallback } from "react";
+import { useMemo } from "react";
+import { bindActionCreators } from "redux";
 
 /**
  * Custom hook to easily access and update Redux state
@@ -10,14 +11,10 @@ export const useRedux = (sliceName, actions = {}) => {
   const dispatch = useDispatch();
   const state = useSelector((state) => state[sliceName]);
 
-  // Create dispatchers for all actions
-  const dispatchers = {};
-  Object.keys(actions).forEach((actionName) => {
-    dispatchers[actionName] = useCallback(
-      (payload) => dispatch(actions[actionName](payload)),
-      [dispatch],
-    );
-  });
+  const dispatchers = useMemo(
+    () => bindActionCreators(actions, dispatch),
+    [actions, dispatch],
+  );
 
   return [state, dispatchers];
 };
@@ -31,18 +28,10 @@ export const useSearch = () => {
   const [state, actions] = useRedux("search", searchActions);
 
   return {
-    // State
-    query: state.searchQuery,
-    history: state.searchHistory,
-    filters: state.filters,
-
-    // Actions
+    ...state, // state er shob props (searchQuery, history, filters etc) directly pawa jabe
+    ...actions, // actions (setSearchQuery, clearSearchQuery etc) directly pawa jabe
+    query: state.searchQuery, // legacy support ba simplify korar jonno
     setQuery: actions.setSearchQuery,
-    clearQuery: actions.clearSearchQuery,
-    setFilters: actions.setFilters,
-    clearFilters: actions.clearFilters,
-    clearHistory: actions.clearSearchHistory,
-    removeFromHistory: actions.removeFromHistory,
   };
 };
 
@@ -55,18 +44,7 @@ export const useAuth = () => {
   const [state, actions] = useRedux("auth", authActions);
 
   return {
-    // State
-    user: state.user,
-    isAuthenticated: state.isAuthenticated,
-    role: state.role,
-    loading: state.loading,
-    error: state.error,
-
-    // Actions
-    loginStart: actions.loginStart,
-    loginSuccess: actions.loginSuccess,
-    loginFailure: actions.loginFailure,
-    logout: actions.logout,
-    setUser: actions.setUser,
+    ...state,
+    ...actions,
   };
 };
