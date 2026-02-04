@@ -34,6 +34,7 @@ export const formatCurrency = (amount) => {
  * @param {number} total - Total number of lessons
  * @returns {number} Progress percentage
  */
+
 export const calculateProgress = (completed, total) => {
   if (!total || total === 0) return 0;
   return Math.round((completed / total) * 100);
