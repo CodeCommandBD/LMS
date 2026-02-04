@@ -1,29 +1,29 @@
-import { useMutation } from "@tanstack/react-query";
-import { toast } from "react-toastify";
-import { deleteAccount } from "../../lib/api";
-import { useDispatch } from "react-redux";
-import { logout } from "../../store/slices/authSlice";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { useAuth } from "../useRedux";
+import { clearAuthToken } from "../../lib/axios";
+import * as api from "../../lib/api";
 
 /**
- * Custom hook to delete account
- * @returns {Object} Mutation result
+ * Hook for Deleting Account
  */
 export const useDeleteAccount = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const auth = useAuth();
 
   return useMutation({
-    mutationFn: deleteAccount,
+    mutationFn: api.deleteAccount,
     onSuccess: (data) => {
       toast.success(data.message || "Account deleted successfully!");
-      dispatch(logout());
+      clearAuthToken();
+      auth.logout();
+      queryClient.clear();
       navigate("/login");
     },
     onError: (error) => {
-      const errorMessage =
-        error.response?.data?.message || "Failed to delete account";
-      toast.error(errorMessage);
+      toast.error(error.message || "Failed to delete account");
     },
   });
 };

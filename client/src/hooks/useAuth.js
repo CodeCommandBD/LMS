@@ -1,96 +1,57 @@
-import { useNavigate } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "./useRedux";
-import { setAuthToken, clearAuthToken } from "../lib/axios";
-import api from "../services/api";
+import { useAuth as useReduxAuth } from "./useRedux";
+import api from "../lib/api";
+
+// Re-export individual hooks
+export { useLogin } from "./auth/useLogin";
+export { useRegister } from "./auth/useRegister";
+export { useLogout } from "./auth/useLogout";
+export { useUpdateProfile } from "./auth/useUpdateProfile";
+export { useChangePassword } from "./auth/useChangePassword";
+export { useDeleteAccount } from "./auth/useDeleteAccount";
+export { useProfile as useUserProfile } from "./auth/useProfile";
+
+import { useLogin } from "./auth/useLogin";
+import { useRegister } from "./auth/useRegister";
+import { useLogout } from "./auth/useLogout";
+import { useUpdateProfile } from "./auth/useUpdateProfile";
+import { useChangePassword } from "./auth/useChangePassword";
+import { useDeleteAccount } from "./auth/useDeleteAccount";
+import { useProfile } from "./auth/useProfile";
 
 /**
- * Complete authentication hook with TanStack Query
+ * Complete authentication and user management hook
+ * Combines all auth logic if you prefer a single hook
  */
 export const useAuthentication = () => {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const auth = useAuth();
+  const auth = useReduxAuth();
 
-  /**
-   * Login Mutation
-   */
-  const loginMutation = useMutation({
-    mutationFn: async ({ credentials, rememberMe }) => {
-      const data = await api.auth.login(credentials);
-      setAuthToken(data.token, data.refreshToken, rememberMe);
-      return data;
-    },
-    onMutate: () => {
-      auth.loginStart();
-    },
-    onSuccess: (data) => {
-      auth.loginSuccess({
-        user: data.user,
-        role: data.role,
-      });
-    },
-    onError: (error) => {
-      auth.loginFailure(error.message || "Login failed");
-    },
-  });
-
-  /**
-   * Register Mutation
-   */
-  const registerMutation = useMutation({
-    mutationFn: async (userData) => {
-      const data = await api.auth.register(userData);
-      setAuthToken(data.token, data.refreshToken);
-      return data;
-    },
-    onMutate: () => {
-      auth.loginStart();
-    },
-    onSuccess: (data) => {
-      auth.loginSuccess({
-        user: data.user,
-        role: data.role,
-      });
-    },
-    onError: (error) => {
-      auth.loginFailure(error.message || "Registration failed");
-    },
-  });
-
-  /**
-   * Logout Mutation
-   */
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      await api.auth.logout();
-    },
-    onSettled: () => {
-      clearAuthToken();
-      auth.logout();
-      queryClient.clear(); // Clear all cache
-      navigate("/login");
-    },
-  });
+  const loginMutation = useLogin();
+  const registerMutation = useRegister();
+  const logoutMutation = useLogout();
+  const updateProfileMutation = useUpdateProfile();
+  const changePasswordMutation = useChangePassword();
+  const deleteAccountMutation = useDeleteAccount();
+  const userProfile = useProfile();
 
   /**
    * Get Current User (Manual fetch helper)
-   * can be converted to useQuery if auto-fetch is needed
    */
   const getCurrentUser = async () => {
     try {
-      const data = await api.auth.getCurrentUser();
-      auth.setUser({
-        user: data.user,
-        role: data.role,
-      });
+      // api.getCurrentUser doesn't exist in lib/api.js, it's getProfile
+      // But let's check if the user meant a specific backend call differently.
+      // In previous useAuth.js it was api.auth.getCurrentUser.
+      // In lib/api.js, getProfile exists.
+      // I'll map it to getProfile logic or api.getProfile if they match.
+      const data = await api.getProfile();
+      auth.setUser({ user: data.user, role: data.user.role || auth.role });
       return { success: true, data };
     } catch (error) {
       return { success: false, error: error.message };
     }
   };
 
-  // Wrapper functions to maintain existing API signature
+  // Wrapper functions for backward compatibility
   const login = async (credentials, rememberMe = true) => {
     try {
       const data = await loginMutation.mutateAsync({ credentials, rememberMe });
@@ -123,9 +84,21 @@ export const useAuthentication = () => {
     logout,
     getCurrentUser,
 
-    // Expose Mutation States (Optional/Extra)
+    // Mutations (Direct Access)
+    loginMutation,
+    registerMutation,
+    logoutMutation,
+    updateProfileMutation,
+    changePasswordMutation,
+    deleteAccountMutation,
+    userProfile, // Include profile query
+
+    // Helper properties for loading states
     isLoginLoading: loginMutation.isPending,
     isRegisterLoading: registerMutation.isPending,
     isLogoutLoading: logoutMutation.isPending,
+    isUpdatingProfile: updateProfileMutation.isPending,
+    isChangingPassword: changePasswordMutation.isPending,
+    isDeletingAccount: deleteAccountMutation.isPending,
   };
 };

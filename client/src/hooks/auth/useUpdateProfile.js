@@ -1,34 +1,27 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
-import { updateProfile } from "../../lib/api";
-import { useDispatch } from "react-redux";
-import { setUser } from "../../store/slices/authSlice";
+import { useAuth } from "../useRedux";
+import * as api from "../../lib/api";
 
 /**
- * Custom hook to update user profile
- * @returns {Object} Mutation result
+ * Hook for Profile Updates
  */
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
-  const dispatch = useDispatch();
+  const auth = useAuth();
 
   return useMutation({
-    mutationFn: updateProfile,
+    mutationFn: api.updateProfile,
     onSuccess: (data) => {
       toast.success(data.message || "Profile updated successfully!");
-
-      // Invalidate profile query to refetch fresh data
       queryClient.invalidateQueries({ queryKey: ["profile"] });
 
-      // Update Redux state
       if (data.user) {
-        // Assuming the API returns the updated user object
-        // dispatch(setUser({ user: data.user, role: data.user.role }));
+        auth.setUser({ user: data.user, role: data.user.role || auth.role });
       }
     },
     onError: (error) => {
-      const errorMessage = error.response?.data?.message || "Update failed";
-      toast.error(errorMessage);
+      toast.error(error.message || "Failed to update profile");
     },
   });
 };

@@ -1,51 +1,45 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { useDispatch } from "react-redux";
-import { login } from "../../store/slices/authSlice";
-import { registerUser } from "../../lib/api";
+import { useAuth } from "../useRedux";
+import { setAuthToken } from "../../lib/axios";
+import * as api from "../../lib/api";
 
 /**
- * Custom hook for user registration (POST)
- * @returns {Object} Mutation result
+ * Hook for User Registration
  */
 export const useRegister = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const auth = useAuth();
 
   return useMutation({
-    mutationFn: registerUser,
+    mutationFn: async (userData) => {
+      const data = await api.registerUser(userData);
+      setAuthToken(data.token, data.refreshToken);
+      return data;
+    },
+    onMutate: () => {
+      auth.loginStart();
+    },
     onSuccess: (data) => {
-      // Automatic login if token is provided
-      if (data.token && data.user) {
-        dispatch(
-          login({
-            token: data.token,
-            user: data.user,
-            role: data.user.role || data.role,
-          }),
-        );
-      }
+      auth.loginSuccess({
+        user: data.user,
+        role: data.role,
+      });
       toast.success(data.message || "Registration successful!");
 
-      // Navigate based on role or to login if no auto-login
-      if (data.token) {
-        const role = data.user?.role || data.role;
-        if (role === "instructor") {
-          navigate("/educator/dashboard");
-        } else {
-          navigate("/");
-        }
+      // Navigate based on role
+      const role = data.user?.role || data.role;
+      if (role === "instructor") {
+        navigate("/educator/dashboard");
       } else {
-        navigate("/login");
+        navigate("/");
       }
     },
     onError: (error) => {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        "Registration failed। আবার try করুন।";
-      toast.error(errorMessage);
+      const message = error.response?.data?.message || "Registration failed";
+      auth.loginFailure(message);
+      toast.error(message);
     },
   });
 };
