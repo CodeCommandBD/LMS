@@ -31,7 +31,7 @@ const searchSlice = createSlice({
       state.filters = { ...state.filters, ...action.payload };
     },
     clearFilters: (state) => {
-      state.filters = initialState.filters;
+      state.filters = { ...initialState.filters };
     },
     clearSearchHistory: (state) => {
       state.searchHistory = [];
