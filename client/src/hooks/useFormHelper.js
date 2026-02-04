@@ -1,102 +1,149 @@
 import { useForm as useReactHookForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 
 /**
- * Enhanced form hook with Zod validation and submission handling
+ * Enhanced form hook with Zod validation and submission handling via TanStack Query
  * @param {object} schema - Zod validation schema
- * @param {Function} onSubmit - Submit handler
+ * @param {Function} mutationFn - Submit handler (mutation function)
  * @param {object} options - Additional options
  */
-export const useForm = (schema, onSubmit, options = {}) => {
-  const [submitError, setSubmitError] = useState(null);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+export const useForm = (schema, mutationFn, options = {}) => {
+  const { defaultValues, resetOnSuccess, onSuccess, onError, ...formOptions } =
+    options;
 
   const form = useReactHookForm({
     resolver: zodResolver(schema),
-    defaultValues: options.defaultValues || {},
-    ...options,
+    defaultValues: defaultValues || {},
+    ...formOptions,
+  });
+
+  const mutation = useMutation({
+    mutationFn: mutationFn,
+    onSuccess: (data, variables, context) => {
+      if (resetOnSuccess) {
+        form.reset();
+      }
+      if (onSuccess) {
+        onSuccess(data, variables, context);
+      }
+    },
+    onError: (error, variables, context) => {
+      if (onError) {
+        onError(error, variables, context);
+      }
+    },
+    ...options.mutationOptions, // Support extra mutation options
   });
 
   const handleSubmit = form.handleSubmit(async (data) => {
+    // We use mutateAsync to allow the form submission to wait for the mutation
+    // This maintains compatibility with logic that might await handleSubmit
+    // and also allows RHF to handle exceptions if needed
     try {
-      setSubmitError(null);
-      setSubmitSuccess(false);
-
-      const result = await onSubmit(data);
-
-      setSubmitSuccess(true);
-
-      if (options.resetOnSuccess) {
-        form.reset();
-      }
-
-      return result;
+      await mutation.mutateAsync(data);
     } catch (error) {
-      setSubmitError(error.message || "An error occurred");
-
-      if (options.onError) {
-        options.onError(error);
-      }
-
-      throw error;
+      // Error is handled in onError, but we catch here to prevent unhandled rejection warning
+      // if the parent does not catch it.
+      // Intentionally empty or simple log if needed.
     }
   });
 
   return {
     ...form,
     handleSubmit,
-    submitError,
-    submitSuccess,
-    isSubmitting: form.formState.isSubmitting,
+    submitError: mutation.error?.message || null,
+    submitSuccess: mutation.isSuccess,
+    isSubmitting: mutation.isPending,
     errors: form.formState.errors,
+    mutation, // Expose full mutation object for advanced usage
   };
 };
 
 /**
- * Simple form hook for basic forms without Zod
+ * Simple form hook for basic forms via TanStack Query
  */
-export const useSimpleForm = (initialValues = {}, onSubmit) => {
-  const [values, setValues] = useState(initialValues);
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+/**
+ * Simple form hook for basic forms via TanStack Query + React Hook Form
+ */
+export const useSimpleForm = (initialValues = {}, mutationFn, options = {}) => {
+  const { resetOnSuccess, onSuccess, onError, ...mutationOptions } = options;
 
-  const handleChange = (name, value) => {
-    setValues((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: null }));
-    }
-  };
+  // Initialize React Hook Form
+  const form = useReactHookForm({
+    defaultValues: initialValues,
+  });
 
-  const handleSubmit = async (e) => {
-    e?.preventDefault();
+  const {
+    register,
+    handleSubmit: rhfHandleSubmit,
+    formState: { errors },
+    reset: rhfReset,
+    setValue,
+    watch,
+  } = form;
 
-    try {
-      setIsSubmitting(true);
-      setErrors({});
-      await onSubmit(values);
-    } catch (error) {
-      if (error.validationErrors) {
-        setErrors(error.validationErrors);
+  // Watch all values to maintain 'values' prop compatibility
+  const values = watch();
+
+  const mutation = useMutation({
+    mutationFn: mutationFn,
+    onSuccess: (data, variables, context) => {
+      if (resetOnSuccess) {
+        rhfReset(initialValues);
       }
-    } finally {
-      setIsSubmitting(false);
-    }
+      if (onSuccess) {
+        onSuccess(data, variables, context);
+      }
+    },
+    onError: (error, variables, context) => {
+      // If server returns validation errors, we could map them here manually if needed
+      if (onError) {
+        onError(error, variables, context);
+      }
+    },
+    ...mutationOptions,
+  });
+
+  // Manual handleChange for backward compatibility
+  const handleChange = (name, value) => {
+    setValue(name, value, {
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true,
+    });
   };
+
+  const handleSubmit = rhfHandleSubmit(async (data) => {
+    try {
+      await mutation.mutateAsync(data);
+    } catch (error) {
+      // Handled in onError
+    }
+  });
 
   const reset = () => {
-    setValues(initialValues);
-    setErrors({});
+    rhfReset(initialValues);
+    mutation.reset();
   };
 
   return {
-    values,
-    errors,
-    isSubmitting,
-    handleChange,
-    handleSubmit,
+    ...form, // Expose all RHF methods
+    values, // Current values
+    errors, // Form errors
+    isSubmitting: mutation.isPending,
+    submitError: mutation.error?.message || null,
+    submitSuccess: mutation.isSuccess,
+    handleChange, // Legacy compatibility
+    handleSubmit, // RHF wrapped submit
     reset,
-    setValues,
-    setErrors,
+    setValues: (newValues) => rhfReset(newValues),
+    setErrors: (newErrors) => {
+      Object.keys(newErrors).forEach((key) => {
+        form.setError(key, { message: newErrors[key] });
+      });
+    },
+    mutation,
   };
 };
