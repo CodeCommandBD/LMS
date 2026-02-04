@@ -20,7 +20,7 @@ const courseSlice = createSlice({
       state.filters = { ...state.filters, ...action.payload };
     },
     resetFilters: (state) => {
-      state.filters = initialState.filters;
+      state.filters = {...initialState.filters};
     },
     setSearchQuery: (state, action) => {
       state.searchQuery = action.payload;
