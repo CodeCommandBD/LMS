@@ -1,82 +1,81 @@
 import { useNavigate } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./useRedux";
 import { setAuthToken, clearAuthToken } from "../lib/axios";
 import api from "../services/api";
 
 /**
- * Complete authentication hook with all auth operations
+ * Complete authentication hook with TanStack Query
  */
 export const useAuthentication = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const auth = useAuth();
 
   /**
-   * Login user
+   * Login Mutation
    */
-  const login = async (credentials, rememberMe = true) => {
-    try {
-      auth.loginStart();
-
+  const loginMutation = useMutation({
+    mutationFn: async ({ credentials, rememberMe }) => {
       const data = await api.auth.login(credentials);
-
-      // Save tokens
       setAuthToken(data.token, data.refreshToken, rememberMe);
-
-      // Update Redux state
-      auth.loginSuccess({
-        user: data.user,
-        role: data.role,
-      });
-
-      return { success: true, data };
-    } catch (error) {
-      auth.loginFailure(error.message);
-      return { success: false, error: error.message };
-    }
-  };
-
-  /**
-   * Register user
-   */
-  const register = async (userData) => {
-    try {
+      return data;
+    },
+    onMutate: () => {
       auth.loginStart();
-
-      const data = await api.auth.register(userData);
-
-      // Save tokens
-      setAuthToken(data.token, data.refreshToken);
-
-      // Update Redux state
+    },
+    onSuccess: (data) => {
       auth.loginSuccess({
         user: data.user,
         role: data.role,
       });
-
-      return { success: true, data };
-    } catch (error) {
-      auth.loginFailure(error.message);
-      return { success: false, error: error.message };
-    }
-  };
+    },
+    onError: (error) => {
+      auth.loginFailure(error.message || "Login failed");
+    },
+  });
 
   /**
-   * Logout user
+   * Register Mutation
    */
-  const logout = async () => {
-    try {
+  const registerMutation = useMutation({
+    mutationFn: async (userData) => {
+      const data = await api.auth.register(userData);
+      setAuthToken(data.token, data.refreshToken);
+      return data;
+    },
+    onMutate: () => {
+      auth.loginStart();
+    },
+    onSuccess: (data) => {
+      auth.loginSuccess({
+        user: data.user,
+        role: data.role,
+      });
+    },
+    onError: (error) => {
+      auth.loginFailure(error.message || "Registration failed");
+    },
+  });
+
+  /**
+   * Logout Mutation
+   */
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
       await api.auth.logout();
-    } catch (error) {
-      console.error("Logout API error:", error);
-    } finally {
+    },
+    onSettled: () => {
       clearAuthToken();
       auth.logout();
+      queryClient.clear(); // Clear all cache
       navigate("/login");
-    }
-  };
+    },
+  });
 
   /**
-   * Get current user
+   * Get Current User (Manual fetch helper)
+   * can be converted to useQuery if auto-fetch is needed
    */
   const getCurrentUser = async () => {
     try {
@@ -91,8 +90,31 @@ export const useAuthentication = () => {
     }
   };
 
+  // Wrapper functions to maintain existing API signature
+  const login = async (credentials, rememberMe = true) => {
+    try {
+      const data = await loginMutation.mutateAsync({ credentials, rememberMe });
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      const data = await registerMutation.mutateAsync(userData);
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const logout = async () => {
+    logoutMutation.mutate();
+  };
+
   return {
-    // State
+    // State (Redux)
     ...auth,
 
     // Methods
@@ -100,5 +122,10 @@ export const useAuthentication = () => {
     register,
     logout,
     getCurrentUser,
+
+    // Expose Mutation States (Optional/Extra)
+    isLoginLoading: loginMutation.isPending,
+    isRegisterLoading: registerMutation.isPending,
+    isLogoutLoading: logoutMutation.isPending,
   };
 };
