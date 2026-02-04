@@ -59,32 +59,41 @@ export const useDebounce = (value, delay = 500) => {
   return debouncedValue;
 };
 
+import { useMutation } from "@tanstack/react-query";
+
 /**
  * Hook for async operations with loading/error states
+ * Refactored to use TanStack Query's useMutation
  */
 export const useAsync = (asyncFunction, immediate = true) => {
-  const [status, setStatus] = useState("idle");
-  const [data, setData] = useState(null);
-  const [error, setError] = useState(null);
+  // We use useMutation because useAsync typically implies an imperative execution
+  const mutation = useMutation({
+    mutationFn: async (args) => {
+      // Handle spread arguments if passed as array, or single arg
+      return typeof args === "object" &&
+        args?.length !== undefined &&
+        Array.isArray(args)
+        ? asyncFunction(...args)
+        : asyncFunction(args);
+    },
+  });
 
   const execute = useCallback(
     async (...params) => {
-      setStatus("loading");
-      setData(null);
-      setError(null);
-
       try {
-        const response = await asyncFunction(...params);
-        setData(response);
-        setStatus("success");
-        return response;
+        // Pass params to mutateAsync
+        // Note: mutationFn receives exactly one variable.
+        // If multiple params are passed to execute, we pass them as an array.
+        const result = await mutation.mutateAsync(
+          params.length > 1 ? params : params[0],
+        );
+        return result;
       } catch (error) {
-        setError(error);
-        setStatus("error");
+        // Error is captured in mutation.error
         throw error;
       }
     },
-    [asyncFunction],
+    [mutation],
   );
 
   useEffect(() => {
@@ -95,12 +104,13 @@ export const useAsync = (asyncFunction, immediate = true) => {
 
   return {
     execute,
-    data,
-    error,
-    isLoading: status === "loading",
-    isSuccess: status === "success",
-    isError: status === "error",
-    isIdle: status === "idle",
+    data: mutation.data ?? null,
+    error: mutation.error ?? null,
+    isLoading: mutation.isPending,
+    isSuccess: mutation.isSuccess,
+    isError: mutation.isError,
+    isIdle: mutation.isIdle,
+    mutation, // Expose full mutation object
   };
 };
 

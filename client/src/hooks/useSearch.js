@@ -1,87 +1,96 @@
 import { useQuery } from "@tanstack/react-query";
-import * as searchService from "../services/searchService";
+import * as api from "../lib/api";
+import { useSearch as useSearchState } from "./useRedux";
+import { useEffect } from "react";
 
 /**
- * TanStack Query Hooks for Search
- * These hooks use the search service for API calls
+ * Unified Search Hook
+ * Combines Redux State (UI) + TanStack Query (Data Fetching)
  */
+export const useCourseSearch = (options = {}) => {
+  // 1. Get Search State from Redux
+  const { query, filters, setQuery, setFilters } = useSearchState();
 
-/**
- * Custom hook for searching courses using TanStack Query
- * @param {string} searchQuery - The search query
- * @param {object} filters - Optional filters
- * @param {object} options - TanStack Query options
- */
-export const useSearchCourses = (searchQuery, filters = {}, options = {}) => {
-  return useQuery({
-    queryKey: ["courses", "search", searchQuery, filters],
-    queryFn: () => searchService.fetchSearchResults(searchQuery, filters),
-    enabled: !!searchQuery && searchQuery.length > 0,
+  // 2. Fetch Data using TanStack Query
+  const searchResult = useQuery({
+    queryKey: ["courses", "search", query, filters],
+    queryFn: () => api.fetchSearchResults(query, filters),
+    enabled: !!query, // Only fetch if there is a query
     staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
-    retry: 2,
+    keepPreviousData: true, // Show previous data while fetching new
     ...options,
   });
+
+  return {
+    // Redux State Access
+    query,
+    filters,
+    setQuery,
+    setFilters,
+
+    // Query Result Access
+    results: searchResult.data || [],
+    isLoading: searchResult.isLoading,
+    isError: searchResult.isError,
+    error: searchResult.error,
+    refetch: searchResult.refetch,
+    isFetching: searchResult.isFetching,
+  };
 };
 
 /**
  * Hook for fetching popular/trending courses
- * @param {object} options - TanStack Query options
  */
 export const usePopularCourses = (options = {}) => {
   return useQuery({
     queryKey: ["courses", "popular"],
-    queryFn: searchService.fetchPopularCourses,
+    queryFn: api.fetchPopularCourses,
     staleTime: 15 * 60 * 1000, // 15 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 30 * 60 * 1000,
     ...options,
   });
 };
 
 /**
- * Hook for fetching search suggestions/autocomplete
- * @param {string} query - Search query
- * @param {object} options - TanStack Query options
+ * Hook for fetching search suggestions
  */
 export const useSearchSuggestions = (query, options = {}) => {
   return useQuery({
     queryKey: ["courses", "suggestions", query],
-    queryFn: () => searchService.fetchSearchSuggestions(query),
+    queryFn: () => api.fetchSearchSuggestions(query),
     enabled: query.length >= 2,
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 2 * 60 * 1000,
     ...options,
   });
 };
 
 /**
- * Hook for fetching course categories
- * @param {object} options - TanStack Query options
+ * Hook for fetching categories
  */
 export const useCategories = (options = {}) => {
   return useQuery({
     queryKey: ["courses", "categories"],
-    queryFn: searchService.fetchCategories,
-    staleTime: 30 * 60 * 1000, // 30 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
+    queryFn: api.getCategories,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
     ...options,
   });
 };
 
 /**
  * Hook for fetching trending searches
- * @param {object} options - TanStack Query options
  */
 export const useTrendingSearches = (options = {}) => {
   return useQuery({
     queryKey: ["search", "trending"],
-    queryFn: searchService.fetchTrendingSearches,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    queryFn: api.fetchTrendingSearches,
+    staleTime: 10 * 60 * 1000,
     ...options,
   });
 };
 
 export default {
-  useSearchCourses,
+  useCourseSearch,
   usePopularCourses,
   useSearchSuggestions,
   useCategories,
