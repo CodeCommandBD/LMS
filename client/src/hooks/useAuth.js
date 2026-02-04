@@ -1,22 +1,24 @@
 import { useAuth as useReduxAuth } from "./useRedux";
 import api from "../lib/api";
 
-// Re-export individual hooks
-export { useLogin } from "./auth/useLogin";
-export { useRegister } from "./auth/useRegister";
-export { useLogout } from "./auth/useLogout";
-export { useUpdateProfile } from "./auth/useUpdateProfile";
-export { useChangePassword } from "./auth/useChangePassword";
-export { useDeleteAccount } from "./auth/useDeleteAccount";
-export { useProfile as useUserProfile } from "./auth/useProfile";
-
+// Import hooks for internal use and re-export them
 import { useLogin } from "./auth/useLogin";
 import { useRegister } from "./auth/useRegister";
 import { useLogout } from "./auth/useLogout";
 import { useUpdateProfile } from "./auth/useUpdateProfile";
 import { useChangePassword } from "./auth/useChangePassword";
 import { useDeleteAccount } from "./auth/useDeleteAccount";
-import { useProfile } from "./auth/useProfile";
+import { useProfile as useUserProfile } from "./auth/useProfile";
+
+export {
+  useLogin,
+  useRegister,
+  useLogout,
+  useUpdateProfile,
+  useChangePassword,
+  useDeleteAccount,
+  useUserProfile,
+};
 
 /**
  * Complete authentication and user management hook
@@ -31,48 +33,34 @@ export const useAuthentication = () => {
   const updateProfileMutation = useUpdateProfile();
   const changePasswordMutation = useChangePassword();
   const deleteAccountMutation = useDeleteAccount();
-  const userProfile = useProfile();
+  const userProfile = useUserProfile();
 
-  /**
-   * Get Current User (Manual fetch helper)
-   */
+  /* ============================================================================
+   * Wrapper Functions (Backward Compatibility)
+   * Easy-to-read wrappers that return { success: boolean, data/error }
+   * ============================================================================ */
+
+  // Helper to standardise async responses: { success: true, data } or { success: false, error }
+  const handleAsync = (promise) =>
+    promise
+      .then((data) => ({ success: true, data }))
+      .catch((error) => ({ success: false, error: error.message }));
+
   const getCurrentUser = async () => {
-    try {
-      // api.getCurrentUser doesn't exist in lib/api.js, it's getProfile
-      // But let's check if the user meant a specific backend call differently.
-      // In previous useAuth.js it was api.auth.getCurrentUser.
-      // In lib/api.js, getProfile exists.
-      // I'll map it to getProfile logic or api.getProfile if they match.
-      const data = await api.getProfile();
+    const { data, isError, error } = await userProfile.refetch();
+    if (isError) return { success: false, error: error.message };
+    if (data?.user)
       auth.setUser({ user: data.user, role: data.user.role || auth.role });
-      return { success: true, data };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+    return { success: true, data };
   };
 
-  // Wrapper functions for backward compatibility
-  const login = async (credentials, rememberMe = true) => {
-    try {
-      const data = await loginMutation.mutateAsync({ credentials, rememberMe });
-      return { success: true, data };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  };
+  const login = (credentials, rememberMe = true) =>
+    handleAsync(loginMutation.mutateAsync({ credentials, rememberMe }));
 
-  const register = async (userData) => {
-    try {
-      const data = await registerMutation.mutateAsync(userData);
-      return { success: true, data };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  };
+  const register = (userData) =>
+    handleAsync(registerMutation.mutateAsync(userData));
 
-  const logout = async () => {
-    logoutMutation.mutate();
-  };
+  const logout = () => logoutMutation.mutate();
 
   return {
     // State (Redux)
