@@ -354,11 +354,9 @@ export const deleteCategory = async (id) => {
 // ============================================
 
 export const fetchSearchResults = async (query, filters = {}) => {
-  const params = new URLSearchParams({
-    q: query,
-    ...filters,
+  const response = await axios.get("/api/courses/search", {
+    params: { q: query, ...filters }
   });
-  const response = await axios.get(`/api/courses/search?${params}`);
   return response.data;
 };
 
@@ -370,7 +368,7 @@ export const fetchPopularCourses = async () => {
 export const fetchSearchSuggestions = async (query) => {
   if (!query || query.length < 2) return [];
   const response = await axios.get("/api/courses/suggestions", {
-    params: { q: query },
+    params: { q: query }
   });
   return response.data;
 };

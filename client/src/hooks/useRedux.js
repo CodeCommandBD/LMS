@@ -7,12 +7,13 @@ import { bindActionCreators } from "redux";
  * @param {string} sliceName - Name of the Redux slice
  * @param {object} actions - Actions from the slice
  */
+
+
 export const useRedux = (sliceName, actions = {}) => {
   const dispatch = useDispatch();
   const state = useSelector((state) => state[sliceName]);
 
-  const dispatchers = useMemo(
-    () => bindActionCreators(actions, dispatch),
+  const dispatchers = useMemo(() => bindActionCreators(actions, dispatch),
     [actions, dispatch],
   );
 
@@ -22,6 +23,8 @@ export const useRedux = (sliceName, actions = {}) => {
 /**
  * Hook for search state management
  */
+
+
 import * as searchActions from "../store/slices/searchSlice";
 
 export const useSearch = () => {
@@ -38,6 +41,7 @@ export const useSearch = () => {
 /**
  * Hook for auth state management
  */
+
 import * as authActions from "../store/slices/authSlice";
 
 export const useAuth = () => {

@@ -1,12 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../services/api";
 
-/**
- * Custom hook for fetching data with automatic error handling
- * @param {string} queryKey - Unique key for the query
- * @param {Function} queryFn - Function to fetch data
- * @param {object} options - Additional options
- */
+
 export const useFetch = (queryKey, queryFn, options = {}) => {
   return useQuery({
     queryKey: Array.isArray(queryKey) ? queryKey : [queryKey],
@@ -18,11 +13,7 @@ export const useFetch = (queryKey, queryFn, options = {}) => {
   });
 };
 
-/**
- * Custom hook for mutations with automatic success/error handling
- * @param {Function} mutationFn - Function to perform mutation
- * @param {object} options - Additional options
- */
+
 export const useMutate = (mutationFn, options = {}) => {
   const queryClient = useQueryClient();
 
@@ -46,27 +37,21 @@ export const useMutate = (mutationFn, options = {}) => {
   });
 };
 
-/**
- * Hook for fetching all courses
- */
+
 export const useCourses = (params = {}) => {
   return useFetch(["courses", params], () => api.course.getAllCourses(params), {
     staleTime: 5 * 60 * 1000,
   });
 };
 
-/**
- * Hook for fetching single course
- */
+
 export const useCourse = (id) => {
   return useFetch(["course", id], () => api.course.getCourseById(id), {
     enabled: !!id,
   });
 };
 
-/**
- * Hook for enrolling in a course
- */
+
 export const useEnrollCourse = () => {
   return useMutate((courseId) => api.course.enrollCourse(courseId), {
     invalidateQueries: ["courses", "enrolled-courses"],
@@ -76,16 +61,12 @@ export const useEnrollCourse = () => {
   });
 };
 
-/**
- * Hook for fetching enrolled courses
- */
+
 export const useEnrolledCourses = () => {
   return useFetch("enrolled-courses", () => api.course.getEnrolledCourses());
 };
 
-/**
- * Hook for creating a course
- */
+
 export const useCreateCourse = () => {
   return useMutate((courseData) => api.course.createCourse(courseData), {
     invalidateQueries: ["courses"],
@@ -95,9 +76,7 @@ export const useCreateCourse = () => {
   });
 };
 
-/**
- * Hook for updating a course
- */
+
 export const useUpdateCourse = () => {
   return useMutate(({ id, data }) => api.course.updateCourse(id, data), {
     invalidateQueries: ["courses"],
@@ -107,9 +86,7 @@ export const useUpdateCourse = () => {
   });
 };
 
-/**
- * Hook for deleting a course
- */
+
 export const useDeleteCourse = () => {
   return useMutate((id) => api.course.deleteCourse(id), {
     invalidateQueries: ["courses"],
