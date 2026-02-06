@@ -1,12 +1,87 @@
 import { useForm as useReactHookForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useDispatch } from "react-redux";
+import { addNotification } from "../store/slices/uiSlice";
 
+/**
+ * Internal hook to handle common mutation logic (invalidation, notifications, reset)
+ */
+const useEnhancedMutation = (mutationFn, options, resetFn) => {
+  const {
+    invalidateKeys = [],
+    successMessage,
+    errorMessage,
+    resetOnSuccess,
+    onSuccess,
+    onError,
+    ...mutationOptions
+  } = options;
+
+  const queryClient = useQueryClient();
+  const dispatch = useDispatch();
+
+  return useMutation({
+    mutationFn,
+    onSuccess: async (data, variables, context) => {
+      // 1. Invalidate queries
+      if (invalidateKeys.length > 0) {
+        await Promise.all(
+          invalidateKeys.map((key) =>
+            queryClient.invalidateQueries({ queryKey: key }),
+          ),
+        );
+      }
+
+      // 2. Show Success Notification
+      if (successMessage) {
+        dispatch(
+          addNotification({
+            type: "success",
+            message: successMessage,
+          }),
+        );
+      }
+
+      // 3. Reset form
+      if (resetOnSuccess && resetFn) {
+        resetFn();
+      }
+
+      // 4. Custom callback
+      if (onSuccess) {
+        onSuccess(data, variables, context);
+      }
+    },
+    onError: (error, variables, context) => {
+      // 1. Show Error Notification
+      if (errorMessage !== false) {
+        const message =
+          typeof errorMessage === "string"
+            ? errorMessage
+            : error.response?.data?.message ||
+              error.message ||
+              "An error occurred";
+
+        dispatch(
+          addNotification({
+            type: "error",
+            message: message,
+          }),
+        );
+      }
+
+      // 2. Custom callback
+      if (onError) {
+        onError(error, variables, context);
+      }
+    },
+    ...mutationOptions,
+  });
+};
 
 export const useForm = (schema, mutationFn, options = {}) => {
-  const { defaultValues, resetOnSuccess, onSuccess, onError, ...formOptions } =
-    options;
+  const { defaultValues, ...formOptions } = options;
 
   const form = useReactHookForm({
     resolver: zodResolver(schema),
@@ -14,34 +89,13 @@ export const useForm = (schema, mutationFn, options = {}) => {
     ...formOptions,
   });
 
-  const mutation = useMutation({
-    mutationFn: mutationFn,
-    onSuccess: (data, variables, context) => {
-      if (resetOnSuccess) {
-        form.reset();
-      }
-      if (onSuccess) {
-        onSuccess(data, variables, context);
-      }
-    },
-    onError: (error, variables, context) => {
-      if (onError) {
-        onError(error, variables, context);
-      }
-    },
-    ...options.mutationOptions, // Support extra mutation options
-  });
+  const mutation = useEnhancedMutation(mutationFn, options, form.reset);
 
   const handleSubmit = form.handleSubmit(async (data) => {
-    // We use mutateAsync to allow the form submission to wait for the mutation
-    // This maintains compatibility with logic that might await handleSubmit
-    // and also allows RHF to handle exceptions if needed
     try {
       await mutation.mutateAsync(data);
     } catch (error) {
-      // Error is handled in onError, but we catch here to prevent unhandled rejection warning
-      // if the parent does not catch it.
-      // Intentionally empty or simple log if needed.
+      // Error handled in onError
     }
   });
 
@@ -52,14 +106,11 @@ export const useForm = (schema, mutationFn, options = {}) => {
     submitSuccess: mutation.isSuccess,
     isSubmitting: mutation.isPending,
     errors: form.formState.errors,
-    mutation, // Expose full mutation object for advanced usage
+    mutation,
   };
 };
 
-
 export const useSimpleForm = (initialValues = {}, mutationFn, options = {}) => {
-  const { resetOnSuccess, onSuccess, onError, ...mutationOptions } = options;
-
   // Initialize React Hook Form
   const form = useReactHookForm({
     defaultValues: initialValues,
@@ -77,24 +128,9 @@ export const useSimpleForm = (initialValues = {}, mutationFn, options = {}) => {
   // Watch all values to maintain 'values' prop compatibility
   const values = watch();
 
-  const mutation = useMutation({
-    mutationFn: mutationFn,
-    onSuccess: (data, variables, context) => {
-      if (resetOnSuccess) {
-        rhfReset(initialValues);
-      }
-      if (onSuccess) {
-        onSuccess(data, variables, context);
-      }
-    },
-    onError: (error, variables, context) => {
-      // If server returns validation errors, we could map them here manually if needed
-      if (onError) {
-        onError(error, variables, context);
-      }
-    },
-    ...mutationOptions,
-  });
+  const mutation = useEnhancedMutation(mutationFn, options, () =>
+    rhfReset(initialValues),
+  );
 
   // Manual handleChange for backward compatibility
   const handleChange = (name, value) => {
