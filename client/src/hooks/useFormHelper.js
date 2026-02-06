@@ -3,12 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 
-/**
- * Enhanced form hook with Zod validation and submission handling via TanStack Query
- * @param {object} schema - Zod validation schema
- * @param {Function} mutationFn - Submit handler (mutation function)
- * @param {object} options - Additional options
- */
+
 export const useForm = (schema, mutationFn, options = {}) => {
   const { defaultValues, resetOnSuccess, onSuccess, onError, ...formOptions } =
     options;
@@ -61,12 +56,7 @@ export const useForm = (schema, mutationFn, options = {}) => {
   };
 };
 
-/**
- * Simple form hook for basic forms via TanStack Query
- */
-/**
- * Simple form hook for basic forms via TanStack Query + React Hook Form
- */
+
 export const useSimpleForm = (initialValues = {}, mutationFn, options = {}) => {
   const { resetOnSuccess, onSuccess, onError, ...mutationOptions } = options;
 

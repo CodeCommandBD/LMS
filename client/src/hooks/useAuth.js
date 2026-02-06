@@ -1,5 +1,5 @@
 import { useAuth as useReduxAuth } from "./useRedux";
-import api from "../lib/api";
+
 
 // Import hooks for internal use and re-export them
 import { useLogin } from "./auth/useLogin";
